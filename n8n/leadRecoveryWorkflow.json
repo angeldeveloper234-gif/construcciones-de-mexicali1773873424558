@@ -1,0 +1,337 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "minutes",
+                            "minutesInterval": 5
+                        }
+                    ]
+                }
+            },
+            "id": "schedule-trigger",
+            "name": "Cron (Cada 5 min)",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                2000,
+                2700
+            ]
+        },
+        {
+            "parameters": {
+                "projectId": "csfmrrjklvawxxhddgek",
+                "query": "=SELECT * FROM leads \nWHERE updated_at < NOW() - INTERVAL '10 minutes' \nAND (status IS NULL OR status = 'new' OR status = '')\nAND (email IS NOT NULL OR phone IS NOT NULL) \nAND name IS NOT NULL\nLIMIT 10;"
+            },
+            "id": "query-leads",
+            "name": "Recuperar Leads Inactivos",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                2220,
+                2700
+            ],
+            "credentials": {
+                "supabaseApi": {
+                    "id": "gQ5A4mlgfIM82o30",
+                    "name": "legal service 1"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const now = new Date();\nconst hour = now.getHours();\n\n// Solo actuar entre las 8:00 y las 20:00 para no molestar\nreturn {\n  allowed: hour >= 8 && hour < 20,\n  currentHour: hour\n};"
+            },
+            "id": "working-hours",
+            "name": "Horario Comercial?",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2440,
+                2700
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "id": "is-allowed",
+                            "leftValue": "={{ $json.allowed }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equal"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "filter-time",
+            "name": "Filtrar Horario",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
+            "position": [
+                2660,
+                2700
+            ]
+        },
+        {
+            "parameters": {
+                "options": {
+                    "systemMessage": "=Eres un experto en **Copywriting Persuasivo Legal**.\n\n### TU MISIÓN:\nEscribir un mensaje ultra-corto y magnético para retomar una consulta abandonada.\n\n### CONTEXTO DEL LEAD:\n- Nombre: {{ $node[\"Recuperar Leads Inactivos\"].json.name }}\n- Resumen de lo que buscaba: {{ $node[\"Recuperar Leads Inactivos\"].json.ai_summary || \"Asesoría general\" }}\n\n### REGLAS:\n1. Máximo 160 caracteres.\n2. No uses saludos genéricos. Ve al grano con su problema.\n3. Termina con una pregunta abierta.\n4. Ejemplo: \"Hola {{ $node[\"Recuperar Leads Inactivos\"].json.name }}, sigo aquí con el tema de tu multa. ¿Quieres que veamos si podemos reducir el monto ahora?\""
+                }
+            },
+            "id": "ai-copywriter",
+            "name": "IA Copywriter",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1.6,
+            "position": [
+                2900,
+                2600
+            ]
+        },
+        {
+            "parameters": {
+                "projectId": {
+                    "__rl": true,
+                    "value": "gen-lang-client-0468317049",
+                    "mode": "list",
+                    "cachedResultName": "PRO GEMINI"
+                }
+            },
+            "id": "model-gemini",
+            "name": "Gemini 2.0 Flash",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+            "typeVersion": 1,
+            "position": [
+                2900,
+                2800
+            ],
+            "credentials": {
+                "googleApi": {
+                    "id": "HGKnkFRmPySzScPs",
+                    "name": "open code"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "dataType": "boolean",
+                "value1": "={{ !!$node[\"Recuperar Leads Inactivos\"].json.phone }}",
+                "rules": {
+                    "rules": [
+                        {
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "switch-channel",
+            "name": "Canal?",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 1,
+            "position": [
+                3150,
+                2600
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.whatsapp.com/v1/messages",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer YOUR_WA_TOKEN"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "to",
+                            "value": "={{ $node[\"Recuperar Leads Inactivos\"].json.phone }}"
+                        },
+                        {
+                            "name": "text",
+                            "value": "={{ $json.output }}"
+                        }
+                    ]
+                }
+            },
+            "id": "send-wa",
+            "name": "WhatsApp (Prioridad)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                3400,
+                2500
+            ]
+        },
+        {
+            "parameters": {
+                "fromEmail": "contacto@angelstudio.design",
+                "toEmail": "={{ $node[\"Recuperar Leads Inactivos\"].json.email }}",
+                "subject": "Sobre tu consulta en Escobar & Asociados",
+                "html": "=<p>{{ $json.output }}</p><br><a href=\"https://legal-escobar.vercel.app\">Responder aquí</a>"
+            },
+            "id": "send-email",
+            "name": "Gmail (Fallback)",
+            "type": "n8n-nodes-base.emailSend",
+            "typeVersion": 2,
+            "position": [
+                3400,
+                2700
+            ]
+        },
+        {
+            "parameters": {
+                "projectId": "csfmrrjklvawxxhddgek",
+                "table": "leads",
+                "data": {
+                    "status": "retargeted",
+                    "updated_at": "={{ new Date().toISOString() }}"
+                },
+                "match": {
+                    "id": "={{ $node[\"Recuperar Leads Inactivos\"].json.id }}"
+                }
+            },
+            "id": "update-status",
+            "name": "Marcar como Recuperado",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                3650,
+                2600
+            ],
+            "credentials": {
+                "supabaseApi": {
+                    "id": "gQ5A4mlgfIM82o30",
+                    "name": "legal service 1"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Cron (Cada 5 min)": {
+            "main": [
+                [
+                    {
+                        "node": "Recuperar Leads Inactivos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Recuperar Leads Inactivos": {
+            "main": [
+                [
+                    {
+                        "node": "Horario Comercial?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Horario Comercial?": {
+            "main": [
+                [
+                    {
+                        "node": "Filtrar Horario",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Filtrar Horario": {
+            "main": [
+                [
+                    {
+                        "node": "IA Copywriter",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IA Copywriter": {
+            "main": [
+                [
+                    {
+                        "node": "Canal?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini 2.0 Flash": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "IA Copywriter",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Canal?": {
+            "main": [
+                [
+                    {
+                        "node": "WhatsApp (Prioridad)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Gmail (Fallback)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "WhatsApp (Prioridad)": {
+            "main": [
+                [
+                    {
+                        "node": "Marcar como Recuperado",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gmail (Fallback)": {
+            "main": [
+                [
+                    {
+                        "node": "Marcar como Recuperado",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

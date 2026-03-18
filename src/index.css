@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+        @apply antialiased text-[#fafafa];
+    }
+
+    body {
+        background-color: #1A1A1A;
+        @apply min-h-screen overflow-x-hidden font-sans;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        @apply font-display text-white;
+    }
+}
+
+@layer utilities {
+    .texture-overlay {
+        position: absolute;
+        inset: 0;
+        background-image: repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 2px,
+            rgba(255, 193, 7, 0.02) 2px,
+            rgba(255, 193, 7, 0.02) 4px
+        );
+        pointer-events: none;
+    }
+
+    /* Mobile Protocol: Chatbot Floating Logic */
+    /* The chatbot launcher usually has a fixed ID or class from the library. 
+       Assuming generic selector or applying global override for fixed elements at bottom right */
+    
+    @media (max-width: 768px) {
+        /* Force any chat widget to be above the sticky bar (64px height + 20px buffer) */
+        [id*="lexflow"], [class*="lexflow"] {
+            bottom: 90px !important;
+        }
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #1A1A1A;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #FFC107;
+        border-radius: 0;
+    }
+}
