@@ -1,6 +1,35 @@
-import { GalleryItem, ProductItem, ServiceItem, TestimonialItem } from './types';
+export interface ServiceItem {
+    id: string;
+    icon: string;
+    title: string;
+    problem: string;
+    agitation: string;
+    solve: string;
+    price: string;
+}
 
-// Defining types locally to ensure zero-dependency errors if types file is missing in context
+export interface TestimonialItem {
+    name: string;
+    role: string;
+    text: string;
+    tags: string[];
+}
+
+export interface GalleryItem {
+    title: string;
+    category: string;
+    image: string;
+}
+
+export interface ProductItem {
+    id: string;
+    name: string;
+    desc: string;
+    price: string;
+    image: string;
+}
+
+// Defining configuration interface
 export interface Config {
     branding: {
         name: string;
